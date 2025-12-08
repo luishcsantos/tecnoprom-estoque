@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="/static/css/styles.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+    rel="stylesheet">
+  <title>Usuários</title>
+  <link rel="icon" href="/static/img/IconTecnoprom.png">
+  <script src="/static/js/script.js"></script>
+  <script src="/static/js/usuarios.js"></script>
+</head>
+
+<body>
+  <header>
+    <aside class="menu">
+      <section class="menu-content">
+        <h6>
+          <a href="/"><img class="main-logo" src="/static/img/Tecnoprom-Novatec.png" alt="LOGO TECNOPROM"></a>
+        </h6>
+
+        <button class="menu-toggle" aria-label="Abrir menu" onclick="toggleMenu()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav class="nav-menu">
+          <ul class="nav-list">
+            <li><a href="/">Inicio</a></li>
+            {% if session.get('access_level') in ['admin', 'vendedor_repos', 'vendedor_serv', 'almoxarifado', 'Comprador_gerencia', 'diretoria'] %}
+            <li><a href="/sgp">SGP</a></li>
+            {% endif %}
+            <li><a href="/ordem_serv">OS</a></li>
+            <li><a href="/pedidos">Pedidos</a></li>
+            <li class="dropdown">
+            {% if session.access_level == "admin" %}
+              <a href="#">Cadastro</a>
+              <ul class="dropdown-menu">
+                <li><a href="/categorias">Categorias</a></li>
+                <li><a href="/encapsulamento">Encapsulamento</a></li>
+              </ul>
+            </li>
+            <li><a href="/usuarios">Usuarios</a></li>
+            {% endif %}
+            <li><a href="/logout" class="logout-button">Logout</a></li>
+          </ul>
+        </nav>
+      </section>
+    </aside>
+  </header>
+
+
+  <div class="tabela-usuarios">
+
+    <h1>Lista de Usuários</h1>
+    <button type="button" class="btn-adicionar" onclick="abrirModalAdicionarUsuario()">Adicionar Usuário</button>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    {% if message != 'Login realizado com sucesso!' %}
+    <div class="alert alert-{{ category }}">
+      {{ message }}
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <table class="tabela-usuarios">
+      <thead>
+        <tr>
+          <th>Usuário</th>
+          <th>Nível de Acesso</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for usuario in usuarios %}
+        <tr>
+          <td>{{ usuario.username }}</td>
+          <td>{{ usuario.access_level }}</td>
+          <td>
+            {% if usuario.username != "admin" or session.username == "admin" %}
+            <a href="javascript:void(0);" class="btn-editar" data-id="{{ usuario.id }}"
+              data-username="{{ usuario.username }}" data-access="{{ usuario.access_level }}"
+              onclick="abrirModalEditarUsuario(this.dataset.id, this.dataset.username, this.dataset.access)">
+              Editar
+            </a>
+            <form action="/excluir_usuario/{{ usuario.id }}" method="POST" style="display: inline;">
+              <button type="submit" class="btn-excluir"
+                onclick="return confirm('Tem certeza que deseja excluir este usuário?');">Excluir</button>
+            </form>
+            {% else %}
+            <!-- Não mostra botões para admin, exceto para ele mesmo -->
+            <span style="color: #888;">Ações restritas</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal de edição de usuário -->
+  <div id="modalEditarUsuario" class="usuario-modal" style="display:none;" aria-modal="true" role="dialog">
+    <div class="usuario-modal-content">
+      <span class="usuario-close" onclick="fecharModalEditarUsuario()">&times;</span>
+      <h2 class="usuario-modal-title">Editar Usuário</h2>
+      <form id="formEditarUsuario" class="usuario-modal-form">
+        <input type="hidden" name="id_usuario" id="edit-id-usuario">
+        <label for="edit-username" class="usuario-modal-label">Usuário:</label>
+        <input type="text" name="username" id="edit-username" class="usuario-modal-input" required>
+        <label for="edit-access-level" class="usuario-modal-label">Nível de Acesso:</label>
+          <select name="access_level" id="edit-access-level" class="usuario-modal-select" required>
+            <option value="user">Usuário</option>
+            <option value="admin">Administrador</option>
+            <option value="comprador">Comprador</option>
+            <option value="almoxarifado">Almoxarifado</option>
+            <option value="vendedor_repos">Vendedor Reposição</option>
+            <option value="vendedor_serv">Vendedor Serviço</option>
+            <option value="rh">RH</option>
+            <option value="Comprador_gerencia">Comprador/Gerência</option>
+            <option value="diretoria">Diretoria</option> 
+          </select>
+        <label for="edit-password" class="usuario-modal-label">Nova Senha:</label>
+        <input type="password" name="password" id="edit-password" class="usuario-modal-input"
+          placeholder="Deixe em branco para não alterar">
+        <button type="submit" class="usuario-btn-editar usuario-modal-btn">Salvar</button>
+        <button type="button" class="usuario-modal-btn" onclick="fecharModalEditarUsuario()">Cancelar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de adicionar usuário -->
+  <div id="modalAdicionarUsuario" class="usuario-modal" style="display:none;" aria-modal="true" role="dialog">
+    <div class="usuario-modal-content">
+      <span class="usuario-close" onclick="fecharModalAdicionarUsuario()">&times;</span>
+      <h2 class="usuario-modal-title">Adicionar Usuário</h2>
+      <form id="formAdicionarUsuario" class="usuario-modal-form">
+        <label for="add-username" class="usuario-modal-label">Usuário:</label>
+        <input type="text" name="username" id="add-username" class="usuario-modal-input" required>
+        <label for="add-access-level" class="usuario-modal-label">Nível de Acesso:</label>
+        <select name="access_level" id="add-access-level" class="usuario-modal-select" required>
+          <option value="user">Usuário</option>
+          <option value="admin">Administrador</option>
+          <option value="comprador">Comprador</option>
+          <option value="almoxarifado">Almoxarifado</option>
+          <option value="vendedor_repos">Vendedor Reposição</option>
+          <option value="vendedor_serv">Vendedor Serviço</option>
+          <option value="rh">RH</option>
+          <option value="Comprador_gerencia">Comprador/Gerência</option>
+          <option value="diretoria">Diretoria</option> 
+        </select>
+        <label for="add-password" class="usuario-modal-label">Senha:</label>
+        <input type="password" name="password" id="add-password" class="usuario-modal-input" required>
+        <button type="submit" class="usuario-btn-editar usuario-modal-btn">Salvar</button>
+        <button type="button" class="usuario-modal-btn" onclick="fecharModalAdicionarUsuario()">Cancelar</button>
+      </form>
+    </div>
+  </div>
+
+</body>
+
+</html

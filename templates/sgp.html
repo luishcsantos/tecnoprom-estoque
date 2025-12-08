@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGP</title>
+  <link rel="icon" href="/static/img/IconTecnoprom.png">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <script id="session-data" type="application/json">
+  {
+    "currentUser":  {{ session.get('username')   |tojson }},
+    "accessLevel":  {{ session.get('access_level')|tojson }}
+  }
+    </script>
+  <script>
+    const S = JSON.parse(document.getElementById('session-data').textContent);
+    window.currentUser = S.currentUser;
+    window.isAdmin = S.accessLevel === 'admin';
+    window.isComprador = S.accessLevel === 'comprador';
+    window.isAlmoxarifado = S.accessLevel === 'almoxarifado';
+    window.isVendedor_serv = S.accessLevel === 'vendedor_serv';
+    window.isVendedor_repos = S.accessLevel === 'vendedor_repos' || S.accessLevel === 'Comprador_gerencia';
+    window.isdiretoria = S.accessLevel === 'diretoria';
+  </script>
+  <script src="/static/js/script.js"></script>
+  {% set is_admin = session.get('access_level') == 'admin' %}
+  {% set is_vendedor_repos = session.get('access_level') == 'vendedor_repos' or session.get('access_level') == 'Comprador_gerencia' %}
+  {% set is_vendedor_serv = session.get('access_level') == 'vendedor_serv' %}
+  {% set is_almoxarifado = session.get('access_level') == 'almoxarifado' %}
+  {% set is_diretoria = session.get('access_level') == 'diretoria' %}
+
+  {% set can_edit_vendedor = is_admin or is_vendedor_repos or is_vendedor_serv or Comprador_gerencia %}
+  {% set can_see_almox = is_admin or is_almoxarifado or is_diretoria %}
+  {% set can_edit_almox = is_admin or is_almoxarifado %}
+  {% set can_click_row = is_admin or is_vendedor_repos or is_vendedor_serv or is_almoxarifado %}
+
+  {# can_see_vendedor_fields é visível para Admin, Vendedor_repos e Vendedor_serv #}
+  {% set can_see_vendedor_fields = is_admin or is_vendedor_repos or is_vendedor_serv %}
+</head>
+
+<body>
+  <header>
+    <aside class="menu">
+      <section class="menu-content">
+        <h6>
+          <a href="/"><img class="main-logo" src="/static/img/Tecnoprom-Novatec.png" alt="LOGO TECNOPROM"></a>
+        </h6>
+        <div class="content-user">
+          <img class="user" src="/static/img/user.png" alt="User" title="Clique para editar sua senha">
+          <h6 class="user-name">{{ session.get('username') }}</h6>
+        </div>
+
+        <div id="modal-senha" class="modal-user">
+          <div class="user-modal-content">
+            <span class="user-close-modal" onclick="fecharModalSenha()">&times;</span>
+            <h2>Alterar Senha</h2>
+            <form class="form-user" id="form-senha" method="POST" action="/alterar_senha">
+              <label>Senha Atual:</label>
+              <input type="password" name="senha_atual" required>
+              <label>Nova Senha:</label>
+              <input type="password" name="nova_senha" required>
+              <label>Confirme a Nova Senha:</label>
+              <input type="password" name="confirmar_senha" required>
+              <button type="submit">Salvar</button>
+            </form>
+          </div>
+        </div>
+
+        <button class="menu-toggle" aria-label="Abrir menu" onclick="toggleMenu()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav class="nav-menu">
+          <ul class="nav-list">
+            <li><a href="/">Inicio</a></li>
+            {% if session.get('access_level') in ['admin', 'vendedor_repos', 'vendedor_serv', 'almoxarifado', 'Comprador_gerencia', 'diretoria'] %}
+            <li><a href="/sgp">SGP</a></li>
+            {% endif %}
+            <li><a href="/ordem_serv">OS</a></li>
+            <li><a href="/pedidos">Pedidos</a></li>
+            <li class="dropdown">
+              {% if session.get('access_level') == "admin" %}
+              <a href="#">Cadastro</a>
+              <ul class="dropdown-menu">
+                <li><a href="/categorias">Categorias</a></li>
+                <li><a href="/encapsulamento">Encapsulamento</a></li>
+              </ul>
+            </li>
+            <li><a href="/usuarios">Usuarios</a></li>
+            {% endif %}
+            <li><a href="/logout" class="logout-button">Logout</a></li>
+          </ul>
+        </nav>
+      </section>
+    </aside>
+  </header>
+  <main style="padding: 2rem;">
+    <div class="pagina-de-sgp">
+      <h2 style="text-align: center;">Lista de SGP</h2>
+    </div>
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <div class="content-sgp">
+
+      {% if session.get('access_level') in ['admin', 'vendedor_repos', 'vendedor_serv', 'Comprador_gerencia', 'diretoria'] %}
+      <div class="botao-sgpcontainer">
+        <button class="btn-adicionar" onclick="abrirModalSGP()"> Adicionar SGP</button>
+      </div>
+      {% endif %}
+
+      <div>
+        <button id="imprimir" type="button" class="print-btn">
+          <span class="printer-wrapper">
+            <span class="printer-container">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 92 75">
+                <path stroke-width="5" stroke="black"
+                  d="M12 37.5H80C85.2467 37.5 89.5 41.7533 89.5 47V69C89.5 70.933 87.933 72.5 86 72.5H6C4.067 72.5 2.5 70.933 2.5 69V47C2.5 41.7533 6.75329 37.5 12 37.5Z">
+                </path>
+                <mask fill="white" id="path-2-inside-1_30_7">
+                  <path d="M12 12C12 5.37258 17.3726 0 24 0H57C70.2548 0 81 10.7452 81 24V29H12V12Z"></path>
+                </mask>
+                <path mask="url(#path-2-inside-1_30_7)" fill="black"
+                  d="M7 12C7 2.61116 14.6112 -5 24 -5H57C73.0163 -5 86 7.98374 86 24H76C76 13.5066 67.4934 5 57 5H24C20.134 5 17 8.13401 17 12H7ZM81 29H12H81ZM7 29V12C7 2.61116 14.6112 -5 24 -5V5C20.134 5 17 8.13401 17 12V29H7ZM57 -5C73.0163 -5 86 7.98374 86 24V29H76V24C76 13.5066 67.4934 5 57 5V-5Z">
+                </path>
+                <circle fill="black" r="3" cy="49" cx="78"></circle>
+              </svg>
+            </span>
+            <span class="printer-page-wrapper">
+              <span class="printer-page"></span>
+            </span>
+          </span>
+          Imprimir
+        </button>
+      </div>
+    </div>
+
+    <div id="modal-sgp-add" class="popup-container-sgp">
+      <div class="popup-content-sgp">
+        <span class="fechar-popup" onclick="fecharModalSGP('modal-sgp-add')">&times;</span>
+        <h2 class="cabecalho-sgp">Nova SGP</h2>
+        <form id="form-sgp-add" style="margin-bottom: 0;">
+          <label>Data: <input type="date" name="data" required></label>
+          <label>Vendedor: <input type="text" name="vendedor"></label>
+          <label>Descrição: <input type="text" name="descricao"></label>
+          <label>Nº do Pedido: <input type="text" name="numero_pedido"></label>
+          <label>Cliente: <input type="text" name="cliente" required></label>
+          <label>Previsão de Entrega: <input type="date" name="previsao_entrega"></label>
+          <label>Observação: <textarea name="observacao1" rows="3"></textarea></label>
+          <div class="botao-container-sgp">
+            <button type="submit" class="botao-sgp">Adicionar</button>
+          </div>
+        </form>
+        <div id="msg-sgp-add"></div>
+      </div>
+    </div>
+
+    <div id="modal-sgp-edit" class="popup-container-sgp">
+      <div class="popup-content-sgp">
+        <span class="fechar-popup" onclick="fecharModalSGP('modal-sgp-edit')">&times;</span>
+        <h2 class="cabecalho-sgp">Editar Pedido SGP</h2>
+        <form id="form-sgp-edit" style="margin-bottom: 0;">
+          <input type="hidden" name="id">
+
+          {# Bloco de Campos do Vendedor: Visível apenas para Admin, Vendedor_repos e Vendedor_serv #}
+          {% if can_see_vendedor_fields %}
+          <h3 style="grid-column: 1 / -1; text-align: center; font-size: 1.5rem; margin-bottom: 10px;">Informações do Vendedor</h3>
+
+          <label>Data (Venda): <input type="date" name="data" {% if not can_edit_vendedor %}readonly{% endif %}></label>
+          <label>Vendedor: <input type="text" name="vendedor" {% if not can_edit_vendedor %}readonly{% endif %}></label>
+          <label>Descrição: <input type="text" name="descricao" {% if not can_edit_vendedor %}readonly{% endif %}></label>
+          <label>Nº do Pedido: <input type="text" name="numero_pedido" {% if not can_edit_vendedor %}readonly{% endif %}></label>
+          <label>Cliente: <input type="text" name="cliente" required {% if not can_edit_vendedor %}readonly{% endif %}></label>
+          <label>Previsão de Entrega: <input type="date" name="previsao_entrega" {% if not can_edit_vendedor %}readonly{% endif %}></label>
+          <label>Observação (Vendedor): <textarea name="observacao1" rows="2" {% if not can_edit_vendedor %}readonly{% endif %}></textarea></label>
+          {% endif %}
+
+          {% if can_see_almox %}
+          {# Adiciona um HR e Título apenas se o bloco de Vendedor estiver visível OU se for Almoxarifado #}
+          {% if can_see_vendedor_fields %}
+          <hr style="grid-column: 1 / -1; margin: 10px 0;">
+          {% endif %}
+          <h3 style="grid-column: 1 / -1; text-align: center; font-size: 1.5rem; margin-bottom: 10px;">Informações do
+            Almoxarifado</h3>
+
+          <label style="display: flex; align-items: center; gap: 10px;">
+            Almoxarifado Ciente:
+            <input type="checkbox" name="almox_ciente" id="almox_ciente_edit" {% if not can_edit_almox %}disabled{% endif %}>
+          </label>
+
+          <label>Data da Separação: <input type="date" name="data_separacao" {% if not can_edit_almox %}readonly{% endif %}></label>
+          <label>Observação (Almoxarifado): <textarea name="observacao2" rows="2" {% if not can_edit_almox %}readonly{% endif %}></textarea></label>
+          <label>Forma de Entrega: <input type="text" name="forma_entrega" {% if not can_edit_almox %}readonly{% endif %}></label>
+          <label>Finalizado Em: <input type="date" name="finalizado_em" {% if not can_edit_almox %}readonly{% endif %}></label>
+          <label>Nota Fiscal: <input type="text" name="nota_fiscal" {% if not can_edit_almox %}readonly{% endif %}></label>
+          {% endif %}
+          
+          <div class="botao-container-sgp">
+            <button type="submit" class="botao-sgp">Salvar Alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table id="tabelaSgp" class="tabela-componentes" style="margin-top:1rem; font-size: 1.2rem;">
+        <thead>
+          <tr>
+            <th>DATA</th>
+            <th>VENDEDOR</th>
+            <th>DESCRIÇÃO</th>
+            <th>Nº DO PEDIDO</th>
+            <th>CLIENTE</th>
+            <th>PREVISÃO ENTREGA</th>
+            <th>OBSERVAÇÃO</th>
+            <th>ALMOX. CIENTE</th>
+            <th>DATA DA SEPARAÇÃO</th>
+            <th>OBSERVAÇÃO</th>
+            <th>FORMA DE ENTREGA</th>
+            <th>FINALIZADO EM</th>
+            <th>NOTA FISCAL</th>
+            {% if session.access_level == 'admin' %}
+            <th>AÇÕES</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sgp %}
+          <tr data-id="{{ s.id }}" {% if session.get('access_level') in ['admin', 'vendedor_repos' , 'vendedor_serv'
+            , 'almoxarifado', 'Comprador_gerencia', 'diretoria' ] %} onclick="abrirModalEditarSGP('{{ s.id }}')" style="cursor: pointer;" {% endif %}
+            {% if s.finalizado_em %}
+              class="sgp-ciente" {# Classe verde agora aplicada apenas a itens finalizados #}
+            {% elif s.previsao_entrega and not s.finalizado_em and s.previsao_entrega < today %}
+              class="sgp-atraso" {# Lógica de atraso (vermelho) mantida #}
+            {% endif %}>
+            <td>{{ s.data.strftime('%d/%m/%Y') if s.data else '' }}</td>
+            <td>{{ s.vendedor or '' }}</td>
+            <td>{{ s.descricao or '' }}</td>
+            <td>{{ s.numero_pedido or '' }}</td>
+            <td>{{ s.cliente or '' }}</td>
+            <td>{{ s.previsao_entrega.strftime('%d/%m/%Y') if s.previsao_entrega else '' }}</td>
+            <td>{{ s.observacao1 or '' }}</td>
+            <td>
+              <input type="checkbox" class="sgp-checkbox" {% if s.almox_ciente %}checked{% endif %} disabled>
+            </td>
+            <td>{{ s.data_separacao.strftime('%d/%m/%Y') if s.data_separacao else '' }}</td>
+            <td>{{ s.observacao2 or '' }}</td>
+            <td>{{ s.forma_entrega or '' }}</td>
+            <td>{{ s.finalizado_em.strftime('%d/%m/%Y') if s.finalizado_em else '' }}</td>
+            <td>{{ s.nota_fiscal or '' }}</td>
+            {% if session.access_level == 'admin' %}
+            <td>
+              <button class="btn-excluir" onclick="event.stopPropagation(); deletarSGP('{{ s.id }}')">Excluir</button>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+
+</html>

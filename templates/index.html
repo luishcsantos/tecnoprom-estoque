@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema-Estoque</title>
+  <link rel="icon" href="/static/img/IconTecnoprom.png">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <script id="session-data" type="application/json">
+  {
+    "currentUser":  {{ session.get('username')   |tojson }},
+    "accessLevel":  {{ session.get('access_level')|tojson }}
+  }
+    </script>
+  <script>
+    const S = JSON.parse(document.getElementById('session-data').textContent);
+    window.currentUser = S.currentUser;
+    window.isAdmin = S.accessLevel === 'admin';
+    window.isComprador = S.accessLevel === 'comprador';
+  </script>
+  <script src="/static/js/script.js"></script>
+</head>
+
+
+<body>
+  <header>
+    <aside class="menu">
+      <section class="menu-content">
+        <h6>
+          <a href="/"><img class="main-logo" src="/static/img/Tecnoprom-Novatec.png" alt="LOGO TECNOPROM"></a>
+        </h6>
+        <div class="content-user">
+          <img class="user" src="/static/img/user.png" alt="User" title="Clique para editar sua senha">
+          <h6 class="user-name">{{ session.username }}</h6>
+        </div>
+
+        <div id="modal-senha" class="modal-user">
+          <div class="user-modal-content">
+            <span class="user-close-modal" onclick="fecharModalSenha()">&times;</span>
+            <h2>Alterar Senha</h2>
+            <form class="form-user" id="form-senha" method="POST" action="/alterar_senha">
+              <label>Senha Atual:</label>
+              <input type="password" name="senha_atual" required>
+              <label>Nova Senha:</label>
+              <input type="password" name="nova_senha" required>
+              <label>Confirme a Nova Senha:</label>
+              <input type="password" name="confirmar_senha" required>
+              <button type="submit">Salvar</button>
+            </form>
+          </div>
+        </div>
+
+        <button class="menu-toggle" aria-label="Abrir menu" onclick="toggleMenu()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav class="nav-menu">
+          <ul class="nav-list">
+            <li><a href="/">Inicio</a></li>
+            {% if session.get('access_level') in ['admin', 'vendedor_repos', 'vendedor_serv', 'almoxarifado', 'Comprador_gerencia', 'diretoria'] %}
+            <li><a href="/sgp">SGP</a></li>
+            {% endif %}
+            <li><a href="/ordem_serv">OS</a></li>
+            <li><a href="/pedidos">Pedidos</a></li>
+            <li class="dropdown">
+              {% if session.access_level == "admin" %}
+              <a href="#">Cadastro</a>
+              <ul class="dropdown-menu">
+                <li><a href="/categorias">Categorias</a></li>
+                <li><a href="/encapsulamento">Encapsulamento</a></li>
+              </ul>
+            </li>
+            <li><a href="/usuarios">Usuarios</a></li>
+            {% endif %}
+            <li><a href="/logout" class="logout-button">Logout</a></li>
+          </ul>
+        </nav>
+      </section>
+    </aside>
+  </header>
+
+  <section class="container-box">
+    <div class="container-busca">
+      <div class="content-busca">
+        <div class="busca">
+          <h2>Local</h2>
+          <input class="Local" type="text" id="local">
+        </div>
+        <button type="button" id="btn-limpar">Limpar</button>
+        <button type="button" id="btn-novo">Novo</button>
+        <button type="button" id="btn-buscar">Buscar</button>
+      </div>
+      <div>
+        <h2 style="text-align: center;">Descrição</h2>
+        <input type="text" id="descricao" class="descricao" placeholder="Digite a Descrição">
+      </div>
+      <div>
+        <div class="container-itens">
+          <div class="container-categ">
+            <h2>Categoria</h2>
+            <select class="select-full" name="categ" id="categoria-select" onchange="filtrarTabela()">
+              <option value="">-- Todas --</option>
+              {% for categ in categorias %}
+              <option value="{{ categ.id_categ }}">{{ categ.categ }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="container-encapsulamento">
+            <h2>Encapsulamento</h2>
+            <select class="select-full" name="encapsulamento" id="encapsulamento-select" onchange="filtrarTabela()">
+              <option value="">-- Todos --</option>
+              {% for item in encapsulamento %}
+              <option value="{{ item.id_pack }}">{{ item.pack }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <h2>Observações</h2>
+        <textarea id="observacoes" class="Obs" rows="3" maxlength="140"></textarea>
+      </div>
+    </div>
+    <div class="container-imagem">
+
+      <img id="imagem-item" class="img-produto" src="/static/img/itens/sem-foto.png" alt="Imagem do produto"
+        onerror="this.src='../static/img/itens/sem-foto.png'">
+    </div>
+  </section>
+
+  <h2 style="text-align:center; margin-top:40px;">Tabela de Componentes</h2>
+  <table class="tabela-componentes">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Descrição</th>
+        <th>Categoria</th>
+        <th>Encapsulamento</th>
+        <th>Local</th>
+        <th>Obs</th>
+        {% if session.access_level == "admin" %}
+        <th>Ação</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in estoque %}
+      <tr data-id="{{ item.id }}">
+        <td>{{ item.id }}</td>
+        <td>{{ item.descr }}</td>
+        <td>{{ item.categ }}</td>
+        <td>{{ item.encaps }}</td>
+        <td>{{ item.local }}</td>
+        <td>{{ item.obs }}</td>
+        <td>
+          <button class="btn-editar" onclick="abrirModalEditar('{{ item.id }}')">Editar</button>
+          <form method="POST" action="/deletar/{{ item.id }}" style="display:inline;"
+            onsubmit="return confirm('Tem certeza?');">
+            <button type="submit" class="btn-excluir">Excluir</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div id="modal-editar" class="modal">
+
+    <div class="modal-content">
+      <span id="fechar-modal-editar" onclick="fecharModalEditar()">&times;</span>
+      <h2>Editar Componente</h2>
+      <form id="form-editar">
+        <input type="hidden" id="edit-id">
+        <label>Descrição:</label>
+        <input type="text" id="edit-descricao" required>
+
+        <label>Categoria:</label>
+        <select id="edit-categoria" required>
+          <option value="">-- selecione --</option>
+          {% for categ in categorias %}
+          <option value="{{ categ.id_categ }}">{{ categ.categ }}</option>
+          {% endfor %}
+        </select>
+        <label>Encapsulamento:</label>
+        <select id="edit-encapsulamento" required>
+          <option value="">-- selecione --</option>
+          {% for item in encapsulamento %}
+          <option value="{{ item.id_pack }}">{{ item.pack }}</option>
+          {% endfor %}
+        </select>
+
+        <label>Local:</label>
+        <input type="text" id="edit-local">
+
+        <label>Observações:</label>
+        <textarea maxlength="140" id="edit-obs"></textarea>
+        <button type="submit">Salvar</button>
+      </form>
+    </div>
+
+</body>
+
+</html>

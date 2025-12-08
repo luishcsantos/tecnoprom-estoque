@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ordem Serviço</title>
+  <link rel="icon" href="/static/img/IconTecnoprom.png">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <script id="session-data" type="application/json">
+  {
+    "currentUser":  {{ session.get('username')   |tojson }},
+    "accessLevel":  {{ session.get('access_level')|tojson }}
+  }
+    </script>
+  <script>
+    const S = JSON.parse(document.getElementById('session-data').textContent);
+    window.currentUser = S.currentUser;
+    window.isAdmin = S.accessLevel === 'admin';
+    window.isComprador = S.accessLevel === 'comprador' || S.accessLevel === 'Comprador_gerencia';
+    window.isVendedor_serv = S.accessLevel === 'vendedor_serv';
+    window.isVendedor_repos = S.accessLevel === 'vendedor_repos' || S.accessLevel === 'Comprador_gerencia';
+    window.isdiretoria = S.accessLevel === 'diretoria';
+  </script>
+  <script src="/static/js/script.js"></script>
+</head>
+
+<body>
+  <header>
+    <aside class="menu">
+      <section class="menu-content">
+        <h6>
+          <a href="/"><img class="main-logo" src="/static/img/Tecnoprom-Novatec.png" alt="LOGO TECNOPROM"></a>
+        </h6>
+        <div class="content-user">
+          <img class="user" src="/static/img/user.png" alt="User" title="Clique para editar sua senha">
+          <h6 class="user-name">{{ session.username }}</h6>
+        </div>
+
+        <div id="modal-senha" class="modal-user">
+          <div class="user-modal-content">
+            <span class="user-close-modal" onclick="fecharModalSenha()">&times;</span>
+            <h2>Alterar Senha</h2>
+            <form class="form-user" id="form-senha" method="POST" action="/alterar_senha">
+              <label>Senha Atual:</label>
+              <input type="password" name="senha_atual" required>
+              <label>Nova Senha:</label>
+              <input type="password" name="nova_senha" required>
+              <label>Confirme a Nova Senha:</label>
+              <input type="password" name="confirmar_senha" required>
+              <button type="submit">Salvar</button>
+            </form>
+          </div>
+        </div>
+
+        <button class="menu-toggle" aria-label="Abrir menu" onclick="toggleMenu()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav class="nav-menu">
+          <ul class="nav-list">
+            <li><a href="/">Inicio</a></li>
+            {% if session.get('access_level') in ['admin', 'vendedor_repos', 'vendedor_serv', 'almoxarifado', 'Comprador_gerencia', 'diretoria'] %}
+            <li><a href="/sgp">SGP</a></li>
+            {% endif %}
+            <li><a href="/ordem_serv">OS</a></li>
+            <li><a href="/pedidos">Pedidos</a></li>
+            <li class="dropdown">
+              {% if session.access_level == "admin" %}
+              <a href="#">Cadastro</a>
+              <ul class="dropdown-menu">
+                <li><a href="/categorias">Categorias</a></li>
+                <li><a href="/encapsulamento">Encapsulamento</a></li>
+              </ul>
+            </li>
+            <li><a href="/usuarios">Usuarios</a></li>
+            {% endif %}
+            <li><a href="/logout" class="logout-button">Logout</a></li>
+          </ul>
+        </nav>
+      </section>
+    </aside>
+  </header>
+  <main style="padding: 2rem;">
+    <div class="pagina-de-os">
+      <h2 style="text-align: center;">Lista de Ordens de Serviço</h2>
+    </div>
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+
+    <div class="container-os-valor">
+      {% if session.access_level in ['admin', 'vendedor_serv', 'diretoria'] %}
+      <label class="total_servico"><strong>Valor Serviço em andamento: </strong><span id="valor-servico-total">R$
+          0,00</span></label>
+
+      <div class="botao-oscontainer">
+
+        <div class="content-os">
+
+          <button class="btn-adicionar" onclick="abrirModalOS()"> Adicionar OS</button>
+        </div>
+        {% endif %}
+
+        <div>
+          <button id="imprimir" type="button" class="print-btn">
+            <span class="printer-wrapper">
+              <span class="printer-container">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 92 75">
+                  <path stroke-width="5" stroke="black"
+                    d="M12 37.5H80C85.2467 37.5 89.5 41.7533 89.5 47V69C89.5 70.933 87.933 72.5 86 72.5H6C4.067 72.5 2.5 70.933 2.5 69V47C2.5 41.7533 6.75329 37.5 12 37.5Z">
+                  </path>
+                  <mask fill="white" id="path-2-inside-1_30_7">
+                    <path d="M12 12C12 5.37258 17.3726 0 24 0H57C70.2548 0 81 10.7452 81 24V29H12V12Z"></path>
+                  </mask>
+                  <path mask="url(#path-2-inside-1_30_7)" fill="black"
+                    d="M7 12C7 2.61116 14.6112 -5 24 -5H57C73.0163 -5 86 7.98374 86 24H76C76 13.5066 67.4934 5 57 5H24C20.134 5 17 8.13401 17 12H7ZM81 29H12H81ZM7 29V12C7 2.61116 14.6112 -5 24 -5V5C20.134 5 17 8.13401 17 12V29H7ZM57 -5C73.0163 -5 86 7.98374 86 24V29H76V24C76 13.5066 67.4934 5 57 5V-5Z">
+                  </path>
+                  <circle fill="black" r="3" cy="49" cx="78"></circle>
+                </svg>
+              </span>
+              <span class="printer-page-wrapper">
+                <span class="printer-page"></span>
+              </span>
+            </span>
+            Imprimir
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-os-add" class="popup-container-os">
+      <div class="popup-content-os">
+        <span class="fechar-popup" onclick="fecharModalOS('modal-os-add')">&times;</span>
+        <h2 class="cabecalho-os">Nova Ordem de Serviço</h2>
+        <form id="form-os-add" style="margin-bottom: 0;">
+          <label>Data Abertura: <input type="date" name="data_abertura" required></label>
+          <label>Status:
+            <select name="status" required>
+              <option value="">Selecione...</option>
+              <option value="Aberta">Aberta</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Em teste">Em teste</option>
+              <!-- <option value="Aguardando aprovação">Aguardando aprovação</option> -->
+              <option value="Aguardando material">Aguardando material</option>
+              <option value="Finalizada">Finalizada</option>
+              <!-- <option value="Cancelada">Cancelada</option>S -->
+            </select>
+          </label>
+          <label>Nº OS: <input type="number" name="n_os"></label>
+          <label>Cliente: <input type="text" name="cliente" required></label>
+          <label>Equipamento: <textarea name="equipamento" rows="3"></textarea></label>
+          <label>Técnico Responsável: <input type="text" name="tecnico_responsavel"></label>
+          <label>Valor Serviço: <input type="number" name="valor_servico" step="0.01" value="0.00"></label>
+          <label>Data Aprovação: <input type="date" name="data_aprovacao"></label>
+          <!-- <label>Tempo Conserto: <input type="number" name="tempo_conserto" step="0.01"></label> -->
+          <!-- <label>Data Entrega: <input type="date" name="data_entrega"></label> -->
+          <label>Observações: <textarea name="observacoes" rows="3"></textarea></label>
+          <div class="botao-container-os">
+            <button type="submit" class="botao-os">Adicionar</button>
+          </div>
+        </form>
+        <div id="msg-os-add"></div>
+      </div>
+    </div>
+
+    <div id="modal-os-edit" class="popup-container-os">
+      <div class="popup-content-os">
+        <span class="fechar-popup" onclick="fecharModalOS('modal-os-edit')">&times;</span>
+        <h2 class="cabecalho-os">Editar Ordem de Serviço</h2>
+        <form id="form-os-edit" style="margin-bottom: 0;">
+          <input type="hidden" name="id">
+          <label>Data Abertura:
+            <input type="date" name="data_abertura" {% if session.access_level not in ['admin', 'vendedor_repos'
+              , 'vendedor_serv' ] %}readonly{% endif %}>
+          </label>
+          <label>Status:
+            <select name="status" required>
+              <option value="Aberta">Aberta</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Em teste">Em teste</option>
+              <option value="Aguardando material">Aguardando material</option>
+              <option value="Finalizada">Finalizada</option>
+            </select>
+          </label>
+          <label>Nº OS:
+            <input type="number" name="n_os" {% if session.access_level not in ['admin', 'vendedor_repos'
+              , 'vendedor_serv' ] %}readonly{% endif %}>
+          </label>
+          <label>Cliente:
+            <input type="text" name="cliente" required {% if session.access_level not in ['admin', 'vendedor_repos'
+              , 'vendedor_serv' ] %}readonly{% endif %}>
+          </label>
+          <label>Equipamento:
+            <textarea name="equipamento" rows="3" {% if session.access_level not in ['admin', 'vendedor_repos'
+              , 'vendedor_serv' ] %}readonly{% endif %}></textarea>
+          </label>
+          <label>Técnico Responsável:
+            <input type="text" name="tecnico_responsavel" {% if session.access_level not in ['admin', 'vendedor_repos'
+              , 'vendedor_serv', 'user' ] %}readonly{% endif %}>
+          </label>
+          {% if session.access_level in ['admin', 'vendedor_serv', 'diretoria'] %}
+          <label>Valor Serviço: <input type="number" name="valor_servico" step="0.01" value="0.00"></label>
+          {% endif %}
+          <label>Data Aprovação:
+            <input type="date" name="data_aprovacao" {% if session.access_level not in ['admin', 'vendedor_repos'
+              , 'vendedor_serv' ] %}readonly{% endif %}>
+          </label>
+          <!-- <label>Tempo Conserto:
+            <input type="number" name="tempo_conserto" step="0.01" {% if session.access_level not in
+              ['admin', 'vendedor_repos' , 'vendedor_serv' ] %}readonly{% endif %}>
+          </label> -->
+          <!-- <label>Data Entrega:
+            <input type="date" name="data_entrega" {% if session.access_level not in ['admin', 'vendedor_repos'
+              , 'vendedor_serv' ] %}readonly{% endif %}>
+          </label> -->
+          <label>Observações:
+            <textarea name="observacoes" rows="3" {% if session.access_level not in ['admin', 'vendedor_repos'
+              , 'vendedor_serv', 'user' ] %}readonly{% endif %}></textarea>
+          </label>
+          <div class="botao-container-os">
+            <button type="submit" class="botao-os">Salvar Alterações</button>
+          </div>
+        </form>
+        <div id="msg-os-edit"></div>
+      </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table id="tabelaOs" class="tabela-componentes" style="margin-top:1rem; font-size: 1.2rem;">
+        <thead>
+          <tr>
+            <th>DATA ABERTURA</th>
+            <th>
+              <select id="status-filter" onchange="filtrarColunaSelect(this, 1)" class="filter-select">
+                <option value="">Todos os Status</option>
+                <option value="Aberta">Aberta</option>
+                <option value="Em andamento">Em andamento</option>
+                <option value="Em teste">Em teste</option>
+                <option value="Aguardando material">Aguardando material</option>
+                <option value="Finalizada">Finalizada</option>
+              </select>
+            </th>
+            <th>Nº OS</th>
+            <th>
+              <select id="cliente-filter" onchange="filtrarColunaSelect(this, 3)" class="filter-select">
+                <option value="">Todos os Clientes</option>
+                {% for os in ordem_serv|unique(attribute='cliente') %}
+                {% if os.cliente %}
+                <option value="{{ os.cliente }}">{{ os.cliente }}</option>
+                {% endif %}
+                {% endfor %}
+              </select>
+            </th>
+            <th>EQUIPAMENTO</th>
+            <th>
+              <select id="tecnico-filter" onchange="filtrarColunaSelect(this, 5)" class="filter-select">
+                <option value="">Todos os Técnicos</option>
+                {% for tecnico in tecnicos %}
+                  <option value="{{ tecnico }}">{{ tecnico }}</option>
+                 {% endfor %}
+              </select>
+            </th>
+            <th>VALOR SERVIÇO</th>
+            <th>DATA APROVAÇÃO</th>
+            <th>TEMPO CONSERTO</th>
+            <th>DATA ENTREGA</th>
+            <th>DIAS ATRASO</th>
+            {% if session.access_level == 'admin' %}
+            <th>AÇÕES</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for os in ordem_serv %}
+          <tr
+  {% if session.access_level=='admin' and os.status != 'Finalizada' %}
+    onclick="abrirModalEditarOS('{{ os.id }}')" style="cursor: pointer;"
+  {% endif %}>
+            <td>{{ os.data_abertura.strftime('%d/%m/%Y') if os.data_abertura else '' }}</td>
+            <td>{{ os.status or '' }}</td>
+            <td>{{ os.n_os or '' }}</td>
+            <td>{{ os.cliente or '' }}</td>
+            <td>{{ os.equipamento or '' }}</td>
+            <td>{{ os.tecnico_responsavel or '' }}</td>
+            {% if session.access_level in ['admin', 'vendedor_serv', 'diretoria'] %}
+            <td>{{ os.valor_servico or '' }}</td>
+            {% endif %}
+            <td>{{ os.data_aprovacao.strftime('%d/%m/%Y') if os.data_aprovacao else '' }}</td>
+            <td>{{ os.tempo_conserto or '' }}</td>
+            <td>{{ os.data_entrega.strftime('%d/%m/%Y') if os.data_entrega else '' }}</td>
+            <td>{{ os.dias_atraso or '' }}</td>
+            <td>{{ os.observacoes or '' }}</td>
+            {% if session.access_level == 'admin' %}
+            <td>
+              <button class="btn-excluir" onclick="event.stopPropagation(); deletarOS('{{ os.id }}')">Excluir</button>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+
+</html>

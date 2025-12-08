@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedidos</title>
+  <link rel="icon" href="/static/img/IconTecnoprom.png">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <!-- <link rel="stylesheet" href="/static/css/print.css" media="print"> -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <script id="session-data" type="application/json">
+  {
+    "currentUser":  {{ session.get('username')   |tojson }},
+    "accessLevel":  {{ session.get('access_level')|tojson }}
+  }
+    </script>
+  <script>
+    const S = JSON.parse(document.getElementById('session-data').textContent);
+    window.currentUser = S.currentUser;
+    window.isAdmin = S.accessLevel === 'admin';
+    window.isComprador = S.accessLevel === 'comprador' || S.accessLevel === 'Comprador_gerencia';
+    window.isdiretoria = s.accessLevel === 'diretoria';
+  </script>
+  <script src="/static/js/script.js"></script>
+</head>
+
+<body>
+  <header>
+    <aside class="menu">
+      <section class="menu-content">
+        <h6>
+          <a href="/"><img class="main-logo" src="/static/img/Tecnoprom-Novatec.png" alt="LOGO TECNOPROM"></a>
+        </h6>
+        <div class="content-user">
+          <img class="user" src="/static/img/user.png" alt="User" title="Clique para editar sua senha">
+          <h6 class="user-name">{{ session.username }}</h6>
+        </div>
+
+        <!-- Modal de alteração de senha -->
+        <div id="modal-senha" class="modal-user">
+          <div class="user-modal-content">
+            <span class="user-close-modal" onclick="fecharModalSenha()">&times;</span>
+            <h2>Alterar Senha</h2>
+            <form class="form-user" id="form-senha" method="POST" action="/alterar_senha">
+              <label>Senha Atual:</label>
+              <input type="password" name="senha_atual" required>
+              <label>Nova Senha:</label>
+              <input type="password" name="nova_senha" required>
+              <label>Confirme a Nova Senha:</label>
+              <input type="password" name="confirmar_senha" required>
+              <button type="submit">Salvar</button>
+            </form>
+          </div>
+        </div>
+
+        <button class="menu-toggle" aria-label="Abrir menu" onclick="toggleMenu()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav class="nav-menu">
+          <ul class="nav-list">
+            <li><a href="/">Inicio</a></li>
+            {% if session.get('access_level') in ['admin', 'vendedor_repos', 'vendedor_serv', 'almoxarifado', 'Comprador_gerencia', 'diretoria'] %}
+            <li><a href="/sgp">SGP</a></li>
+            {% endif %}
+            <li><a href="/ordem_serv">OS</a></li>
+            <li><a href="/pedidos">Pedidos</a></li>
+            <li class="dropdown">
+              {% if session.access_level == "admin" %}
+              <a href="#">Cadastro</a>
+              <ul class="dropdown-menu">
+                <li><a href="/categorias">Categorias</a></li>
+                <li><a href="/encapsulamento">Encapsulamento</a></li>
+              </ul>
+            </li>
+            <li><a href="/usuarios">Usuarios</a></li>
+            {% endif %}
+            <li><a href="/logout" class="logout-button">Logout</a></li>
+          </ul>
+        </nav>
+      </section>
+    </aside>
+  </header>
+
+
+  <div class="pagina-pedidos">
+    <h1> Lista de Pedidos </h1>
+  </div>
+
+<div class="content-pedidos">
+
+  <div class="busca-componente">
+    <label for="componente-search" style="font-weight: bold; font-size: 1.4rem;"></label>
+    <input type="text" id="componente-search" placeholder="🔎 Buscar componente" 
+           onkeyup="carregarPedidos()" 
+           style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 250px;">
+  </div>
+  
+  <div class="botao-pedidoscontainer">
+    <button type="button" class="botao-abrir" id="abrirPopup">Realizar Pedido</button>
+  </div>
+
+  <div>
+    <button id="imprimir" type="button" class="print-btn">
+  <span class="printer-wrapper">
+    <span class="printer-container">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 92 75">
+        <path
+          stroke-width="5"
+          stroke="black"
+          d="M12 37.5H80C85.2467 37.5 89.5 41.7533 89.5 47V69C89.5 70.933 87.933 72.5 86 72.5H6C4.067 72.5 2.5 70.933 2.5 69V47C2.5 41.7533 6.75329 37.5 12 37.5Z"
+        ></path>
+        <mask fill="white" id="path-2-inside-1_30_7">
+          <path
+            d="M12 12C12 5.37258 17.3726 0 24 0H57C70.2548 0 81 10.7452 81 24V29H12V12Z"
+          ></path>
+        </mask>
+        <path
+          mask="url(#path-2-inside-1_30_7)"
+          fill="black"
+          d="M7 12C7 2.61116 14.6112 -5 24 -5H57C73.0163 -5 86 7.98374 86 24H76C76 13.5066 67.4934 5 57 5H24C20.134 5 17 8.13401 17 12H7ZM81 29H12H81ZM7 29V12C7 2.61116 14.6112 -5 24 -5V5C20.134 5 17 8.13401 17 12V29H7ZM57 -5C73.0163 -5 86 7.98374 86 24V29H76V24C76 13.5066 67.4934 5 57 5V-5Z"
+        ></path>
+        <circle fill="black" r="3" cy="49" cx="78"></circle>
+      </svg>
+    </span>
+
+    <span class="printer-page-wrapper">
+      <span class="printer-page"></span>
+    </span>
+  </span>
+  Imprimir
+</button>
+  </div> 
+</div>
+ 
+  <div id="pedidosPopup" class="popup-container-pedidos">
+    <div class="popup-content-pedidos">
+      <span class="fechar-popup">&times;</span>
+      <div class="cabecalho-pedidos">
+        <p><strong>Novo Pedido</strong></p>
+      </div>
+      <!-- <p>
+        <label for="date"> Data do pedido : </label>
+        <span id="date"></span> <span id="time"></span>
+      </p> -->
+      <p>
+        <label for="componente"> Componente : </label>
+        <input type="text" id="componente" name="componente" placeholder="Componente">
+      </p>
+      <p>
+        <label for="link"> Link de compra : </label>
+        <input type="text" id="link" name="link" placeholder="Link de compra">
+      </p>
+      <!-- <p>
+        <label for="fornecedor"> Fornecedor : </label>
+        <input type="text" id="fornecedor" name="fornecedor" placeholder="Fornecedor">
+      </p> -->
+      <p>
+        <label for="quantidade"> Quantidade de compra : </label>
+        <input type="number" id="quantidade" name="quantidade" placeholder="Digite a quantidade">
+      </p>
+      <p>
+        <label for="motivo">Motivo da compra :</label>
+        <input type="text" id="motivo" name="motivo" placeholder="Motivo da compra">
+      </p>
+      <div class="checkbox-container">
+        <input type="checkbox" id="urgente" name="urgente">
+        <label for="urgente" class="checkbox-label">
+          <span class="checkbox custom"></span>
+          <span class="checkbox-label-text">Urgente</span>
+        </label>
+
+      </div>
+      <div class="botao-container-pedidos">
+        <button type="button" id="btn-adicionar-pedido" class="botao-pedidos">Enviar</button>
+      </div>
+    </div>
+  </div>
+  <div class="tabela-pedidos">
+    <h2 style="text-align: center;">Pedidos Realizados</h2>
+    <table id="tabelaPedidos" class="tabela-pedidos">
+      <thead>
+        <tr>
+          <th>Data <input id="Data-select" type="date" onchange="carregarPedidos()"><br></th>
+          <th>Componente</th>
+          <th>Fornecedor</th>
+          <th>Quantidade</th>
+          <th>Urgente</th>
+          <th><select class="minimal-select" id="requisitante-select" onchange="carregarPedidos()">
+              <option value="">Requisitante</option>
+              {% for u in usuarios %}
+              <option value="{{ u.username }}">{{ u.username }}</option>
+              {% endfor %}
+            </select>
+          </th>
+          <th>Motivo</th>
+          <th>Link</th>
+          <th>
+              <select id="comprado-select" class="minimal-select" onchange="carregarPedidos()">
+                <option value="">Pedidos</option>
+                <option value="Sim">Comprados</option>
+                <option value="Não">Pendentes</option>
+              </select>
+          </th>
+          <th>Comprador</th>
+          <th>Data Compra</th>
+          <th>Data Chegada</th>
+          <th> <select id="status-select" class="minimal-select" onchange="carregarPedidos()">
+              <option value="">Status</option>
+              <option value="true">Entregues</option>
+              <option value="false">Pendentes</option>
+            </select></th>
+        </tr>
+      </thead>
+      <tbody>
+        </tbody>
+    </table>
+  </div>
+
+
+
+  <!-- Modal de edição de pedido -->
+  <div id="modal-editar-pedido" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="fecha-edit">
+        <span id="fechar-modal-editar-pedido">&times;</span>
+      </div>
+      <div class="modal-pedidos">
+        <h2>Editar Pedido</h2>
+        <form id="form-editar-pedido">
+          <input type="hidden" id="edit-pedido-id">
+          <label>Data Chegada:</label>
+          <input type="date" id="edit-data-chegada"><br>
+          <label for="edit-fornecedor"> Fornecedor : </label>
+          <input type="text" id="edit-fornecedor" name="fornecedor" placeholder="Fornecedor">
+          <label for="edit-obs-pedidos">Observações</label>
+          <textarea class="Obs" id="edit-obs-pedidos" name="obs"></textarea>
+          <button type="submit">Salvar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

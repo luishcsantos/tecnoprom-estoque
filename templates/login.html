@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Estoque</title>
+    <link href="/static/css/styles.css" rel="stylesheet" />
+    <link rel="icon" href="/static/img/IconTecnoprom.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/script.js"></script>
+</head>
+
+<body class="login-body">
+    <div class="login-background"></div>
+    <div class="login-container">
+        <img src="/static/img/Tecnoprom-Novatec.png" alt="Logo Tecnoprom" class="login-logo">
+        <h2>Login</h2>
+        <div class="alert alert-{{ category }}">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if message != 'Login realizado com sucesso!' %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+            <form method="POST">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" name="username" placeholder="Usuário" required>
+                </div>
+                <div class="input-group" style="position: relative;">
+                    <span id="toggle-password">
+                        <i id="eye-icon" class="fa fa-eye-slash"></i>
+                    </span>
+                    <input type="password" id="password" name="password" placeholder="Senha" required>
+                    
+                </div>
+                <button class="btn-entrar" type="submit">Entrar</button>
+            </form>
+        </div>
+</body>
+
+</html>
